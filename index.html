@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket AI Budget Assistant</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans pb-10">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                <i class="fa-solid fa-wallet"></i> Pocket AI
+            </h1>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-semibold">
+                Online
+            </span>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-5">
+
+        <!-- Balance Overview -->
+        <div class="bg-gradient-to-br from-slate-800 to-slate-850 p-5 rounded-2xl border border-slate-700 shadow-xl">
+            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Balance</p>
+            <h2 id="totalBalance" class="text-3xl font-extrabold text-white mt-1">₹0</h2>
+            
+            <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-700/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 uppercase">Income</p>
+                        <p id="totalIncome" class="text-sm font-bold text-emerald-400">₹0</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 uppercase">Expense</p>
+                        <p id="totalExpense" class="text-sm font-bold text-rose-400">₹0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Insights Box -->
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-indigo-500/30 relative overflow-hidden">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="fa-solid fa-robot text-indigo-400"></i>
+                <h3 class="text-sm font-semibold text-indigo-300">Pocket AI Advisor</h3>
+            </div>
+            <p id="aiAdvice" class="text-xs text-slate-300 leading-relaxed">
+                Add your income and expenses below. I'll analyze your spending habits and give smart tips!
+            </p>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+            <h3 class="text-xs font-semibold text-slate-400 mb-3">Expense Breakdown</h3>
+            <div class="h-44 relative flex items-center justify-center">
+                <canvas id="expenseChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Add Transaction Form -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+            <h3 class="text-sm font-semibold text-slate-200 mb-3">Add New Transaction</h3>
+            <form id="txForm" class="space-y-3">
+                <input type="text" id="desc" placeholder="Description (e.g., Tea, Salary, Rent)" required
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" id="amount" placeholder="Amount (₹)" required min="1"
+                        class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+                    
+                    <select id="category" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-emerald-500 transition">
+                        <option value="Food">Food & Drinks</option>
+                        <option value="Rent">Rent & Bills</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Income">Salary / Income</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <button type="submit" 
+                    class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-xl transition duration-200 text-sm shadow-lg shadow-emerald-500/20 active:scale-[0.98]">
+                    Add Entry
+                </button>
+            </form>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-semibold text-slate-200">Recent Transactions</h3>
+                <button id="clearBtn" class="text-[11px] text-rose-400 hover:underline">Clear All</button>
+            </div>
+            <ul id="txList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <!-- Dynamic Content -->
+            </ul>
+        </div>
+
+    </main>
+
+    <!-- Logic Script -->
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('pocket_ai_txs')) || [];
+        let chartInstance = null;
+
+        const form = document.getElementById('txForm');
+        const descInput = document.getElementById('desc');
+        const amountInput = document.getElementById('amount');
+        const categoryInput = document.getElementById('category');
+        const txList = document.getElementById('txList');
+        const totalBalanceEl = document.getElementById('totalBalance');
+        const totalIncomeEl = document.getElementById('totalIncome');
+        const totalExpenseEl = document.getElementById('totalExpense');
+        const aiAdviceEl = document.getElementById('aiAdvice');
+        const clearBtn = document.getElementById('clearBtn');
+
+        function init() {
+            updateUI();
+            initChart();
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const desc = descInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const category = categoryInput.value;
+
+            if (!desc || isNaN(amount) || amount <= 0) return;
+
+            const newTx = {
+                id: Date.now(),
+                desc,
+                amount,
+                category,
+                type: category === 'Income' ? 'income' : 'expense'
+            };
+
+            transactions.push(newTx);
+            saveAndRender();
+            
+            descInput.value = '';
+            amountInput.value = '';
+        });
+
+        function deleteTx(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveAndRender();
+        }
+
+        clearBtn.addEventListener('click', () => {
+            if(confirm('Are you sure you want to clear all data?')) {
+                transactions = [];
+                saveAndRender();
+            }
+        });
+
+        function saveAndRender() {
+            localStorage.setItem('pocket_ai_txs', JSON.stringify(transactions));
+            updateUI();
+            updateChart();
+            runAIEngine();
+        }
+
+        function updateUI() {
+            const income = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+            const expense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+            const balance = income - expense;
+
+            totalBalanceEl.textContent = `₹${balance.toLocaleString()}`;
+            totalIncomeEl.textContent = `₹${income.toLocaleString()}`;
+            totalExpenseEl.textContent = `₹${expense.toLocaleString()}`;
+
+            txList.innerHTML = '';
+            if (transactions.length === 0) {
+                txList.innerHTML = `<li class="text-xs text-slate-500 text-center py-4">No transactions added yet.</li>`;
+                return;
+            }
+
+            [...transactions].reverse().forEach(tx => {
+                const li = document.createElement('li');
+                const isIncome = tx.type === 'income';
+                li.className = 'flex justify-between items-center p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50 text-xs';
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'} flex items-center justify-center text-[10px]">
+                            <i class="fa-solid ${isIncome ? 'fa-plus' : 'fa-minus'}"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-slate-200">${tx.desc}</p>
+                            <p class="text-[10px] text-slate-400">${tx.category}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold ${isIncome ? 'text-emerald-400' : 'text-slate-200'}">
+                            ${isIncome ? '+' : '-'}₹${tx.amount.toLocaleString()}
+                        </span>
+                        <button onclick="deleteTx(${tx.id})" class="text-slate-500 hover:text-rose-400 transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                txList.appendChild(li);
+            });
+        }
+
+        function runAIEngine() {
+            if (transactions.length === 0) {
+                aiAdviceEl.textContent = "Add your income and expenses below. I'll analyze your spending habits and give smart tips!";
+                return;
+            }
+
+            const income = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+            const expenses = transactions.filter(t => t.type === 'expense');
+            const totalExpense = expenses.reduce((acc, t) => acc + t.amount, 0);
+
+            const catTotals = {};
+            expenses.forEach(t => {
+                catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+            });
+
+            let topCategory = '';
+            let maxExpense = 0;
+            for (const cat in catTotals) {
+                if (catTotals[cat] > maxExpense) {
+                    maxExpense = catTotals[cat];
+                    topCategory = cat;
+                }
+            }
+
+            if (totalExpense > income && income > 0) {
+                aiAdviceEl.innerHTML = `<span class="text-rose-400 font-semibold">Alert:</span> Your expenses exceed your income by ₹${(totalExpense - income).toLocaleString()}! Consider cutting down on <b>${topCategory}</b>.`;
+            } else if (income > 0 && (totalExpense / income) > 0.7) {
+                aiAdviceEl.innerHTML = `You are spending <b>${Math.round((totalExpense/income)*100)}%</b> of your income. High spending detected in <b>${topCategory}</b>!`;
+            } else if (topCategory === 'Food' && maxExpense > 2000) {
+                aiAdviceEl.innerHTML = `Food expenses are high (₹${maxExpense.toLocaleString()}). Try cooking at home to save around ₹1,500 this month!`;
+            } else if (income > 0 && totalExpense < income * 0.5) {
+                aiAdviceEl.innerHTML = `Great job! You have saved more than <b>50%</b> of your income. Consider investing the surplus!`;
+            } else {
+                aiAdviceEl.innerHTML = `Your financial health looks stable. Keep recording all entries to receive better insights!`;
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: getChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
+                    },
+                    borderWidth: 0
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!chartInstance) return;
+            chartInstance.data = getChartData();
+            chartInstance.update();
+        }
+
+        function getChartData() {
+            const expenses = transactions.filter(t => t.type === 'expense');
+            const catTotals = {};
+
+            expenses.forEach(t => {
+                catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+            });
+
+            const labels = Object.keys(catTotals);
+            const data = Object.values(catTotals);
+
+            return {
+                labels: labels.length ? labels : ['No Data'],
+                datasets: [{
+                    data: data.length ? data : [1],
+                    backgroundColor: data.length ? ['#f43f5e', '#3b82f6', '#eab308', '#a855f7', '#64748b'] : ['#334155']
+                }]
+            };
+        }
+
+        init();
+    </script>
+</body>
+</html>
